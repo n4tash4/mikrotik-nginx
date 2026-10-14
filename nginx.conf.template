@@ -1,0 +1,16 @@
+# http-context snippet, rendered verbatim to /etc/nginx/conf.d/00-upgrade-map.conf
+# by nginx.sh. It MUST load before default.conf (hence the 00- prefix) because
+# the vhost in default.conf references $connection_upgrade.
+#
+# Home Assistant's frontend is a long-lived WebSocket. nginx will not proxy a
+# WebSocket unless the Upgrade/Connection headers are forwarded, and the correct
+# value of the Connection header depends on whether the client actually asked to
+# upgrade. This map yields "upgrade" for a real WebSocket handshake and "close"
+# otherwise, which is the canonical nginx WebSocket pattern. Without it the HA
+# UI loads but then shows a persistent "connection lost" error.
+#
+# No env substitution happens in this file — it is copied as-is.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
