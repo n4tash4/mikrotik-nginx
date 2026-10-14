@@ -60,14 +60,15 @@
 # The sensitive envs (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, LE_EMAIL) are
 # added by rsc/secrets.local.rsc — RUN THAT FIRST. Do NOT put the secret here.
 #
-# PASSWORD is the management-SSH root password; set a real value or omit the
-# line to disable password login (host keys are still generated at startup).
-/container/envs/add list=nginx key="PASSWORD"           value="<ssh-password>"
+# PASSWORD is the management-SSH root password. Because it is sensitive it is
+# added by rsc/secrets.local.rsc (run that FIRST), NOT here. Omit it entirely to
+# disable password login (host keys are still generated at startup).
 /container/envs/add list=nginx key="DOMAIN"             value="ha.dids.atasha.net"
 /container/envs/add list=nginx key="UPSTREAM"           value="http://192.168.20.52:8123"
 /container/envs/add list=nginx key="AWS_DEFAULT_REGION" value="us-east-1"
 
-# --- the following three are added by rsc/secrets.local.rsc (run it first) ---
+# --- the following are added by rsc/secrets.local.rsc (run it first) ---
+#   PASSWORD                = <only in secrets.local.rsc>
 #   AWS_ACCESS_KEY_ID       = AKIAQZFG5CUIMEFHGLDW   (ok to see; the SECRET is not)
 #   AWS_SECRET_ACCESS_KEY   = <only in secrets.local.rsc>
 #   LE_EMAIL                = <only in secrets.local.rsc>

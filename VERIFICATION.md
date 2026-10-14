@@ -29,11 +29,12 @@ nginx 1.25+). Fixed to the 1.22-compatible `listen 443 ssl http2;` form,
 rebuilt, and re-verified green.
 
 ## Secret handling
-- The real `AWS_SECRET_ACCESS_KEY` value is NOT present in any file (it was not
-  materialized in the build context). `rsc/secrets.local.rsc` carries a clearly
-  marked `<AWS_SECRET_ACCESS_KEY>` placeholder to be filled in before deploy.
+- The real `AWS_SECRET_ACCESS_KEY` and `LE_EMAIL` (`n@atasha.net`) values live
+  ONLY in `rsc/secrets.local.rsc`, which is git-ignored and untracked. The SSH
+  `PASSWORD` env is still a placeholder for the operator to fill before deploy.
 - `rsc/secrets.local.rsc` and `*.tar` are git-ignored (confirmed via
-  `git check-ignore`); neither appears as a tracked change.
+  `git check-ignore`); the secret appears in no tracked file and in no git
+  history (confirmed via `git log --all -p`).
 - Access key id `AKIAQZFG5CUIMEFHGLDW` appears only in `rsc/secrets.local.rsc`
   and as a comment in `rsc/01-router-nginx.rsc` (per spec — the id is not secret).
 

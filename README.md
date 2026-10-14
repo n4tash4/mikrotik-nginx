@@ -98,12 +98,28 @@ Reference IAM policy (zone id filled in; the secret key is NOT stored here):
         {
             "Sid": "VisualEditor1",
             "Effect": "Allow",
-            "Action": "route53:TestDNSAnswer",
+            "Action": [
+                "route53:TestDNSAnswer",
+                "route53:ListHostedZones",
+                "route53:GetChange"
+            ],
             "Resource": "*"
         }
     ]
 }
 ```
+
+> **Why `ListHostedZones` and `GetChange` are required (and on `*`).**
+> `certbot-dns-route53` does not take a zone id — it **discovers** the zone by
+> calling `route53:ListHostedZones` and matching the longest zone name against
+> the domain, then **polls** `route53:GetChange` until the challenge TXT record
+> reaches `INSYNC`. Both are account-level operations that AWS only accepts with
+> `Resource: "*"` (they are not addressable per-hostedzone). Omitting either
+> makes issuance fail with an `AccessDenied` on exactly that call — a policy
+> that only grants the three zone-scoped actions above is **not sufficient** on
+> its own. This was verified live during deployment: certbot failed first on
+> `ListHostedZones`, then on `GetChange`, before succeeding once both were
+> added.
 
 ## Renewal automation
 
@@ -121,6 +137,28 @@ DNS-01 does **not** need an A record to *issue* the certificate, but external
 clients need one to *reach* the proxy. Create an A record
 `ha.dids.atasha.net -> <router public IP>` in the `atasha.net` zone. The WAN IP
 is **dynamic** (DHCP on `ether1`); if it changes, update the A record.
+
+## LAN access — split DNS
+
+LAN clients cannot reach `ha.dids.atasha.net` via the public A record: a request
+from inside the LAN to the public IP would need NAT loopback (hairpin), and the
+`dstnat` forwards only match `in-interface=ether1`, so LAN-origin traffic hits
+the router's own services instead. Fix it with **split DNS** — point the name at
+the container directly for internal clients only:
+
+```
+/ip/dns/static/add name="ha.dids.atasha.net" type=A address=192.168.102.2 ttl=5m \
+    comment="split-DNS: LAN clients reach the nginx HA proxy container directly"
+/ip/dns/cache/flush
+```
+
+The router (`192.168.20.1`) is the LAN resolver with `allow-remote-requests=yes`,
+so every LAN client now resolves the name to `192.168.102.2` and connects to the
+container directly. The TLS cert still validates (SNI is `ha.dids.atasha.net`
+regardless of the IP reached), so LAN access is trusted HTTPS with no hairpin
+rule. External clients are unaffected — they resolve the public IP via Route53.
+Verified live: a LAN `GET https://ha.dids.atasha.net/` returns `200` with
+`ssl_verify_result=0` (trusted) and the Home Assistant frontend.
 
 ## RouterOS setup (`rsc/`)
 
